@@ -5,6 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from collections import Counter
 import re
+import random
 
 #----------------------------------------------------------------------------------------
 #CONSTANTES
@@ -15,9 +16,10 @@ EMBEDDING_DIM = 100
 HIDDEN_DIM = 256    
 NUM_LAYERS = 2 
 LEARNING_RATE = 0.0005
-NUM_EPOCHS = 30
+NUM_EPOCHS = 15
+BIDIRECTIONAL = True
 
-
+SEED = 42
 #----------------------------------------------------------------------------------------
 #Classes
 
@@ -35,34 +37,41 @@ class TextoDataset(Dataset):
 class GeradorTextoLSTM(nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, num_layers):
         super(GeradorTextoLSTM, self).__init__()
+        self.num_directions = 2
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
+
         self.lstm = nn.LSTM(
             input_size=embedding_dim,
             hidden_size=hidden_dim,
             num_layers=num_layers,
             batch_first=True, 
-            dropout=0.5 if num_layers > 1 else 0 
+            dropout=0.5 if num_layers > 1 else 0,
+            bidirectional=BIDIRECTIONAL 
         )
-        self.linear = nn.Linear(hidden_dim, vocab_size)
+        self.linear = nn.Linear(hidden_dim * self.num_directions, vocab_size)
+
 
     def forward (self, x, hidden=None):
         embedded = self.embedding(x)
-        lstm_out, hidden = self.lstm(embedded, hidden)
-        ultima_saida = lstm_out[:, -1, :] 
+        lstm_out, (h_n, c_n) = self.lstm(embedded, hidden)
+
+        h_fwd = h_n[-2,:,:]
+        h_bwd = h_n[-1,:,:]
+
+        ultima_saida = torch.cat([h_fwd, h_bwd], dim=1) 
         output = self.linear(ultima_saida)
-        return output, hidden
+
+        return output, (h_n,c_n)
 #----------------------------------------------------------------------------------------
 #Funções
 
 def criagem_corpus ():
-    vet = []
-    total = 0
+    vet = [];total = 0
     with open("corpus.txt","r",encoding="utf-8") as dados:
         for letra in dados:
             if len(letra) > 1:
                 vet.append(letra)
     
-    #Info do corpus:
     print(f"Total de músicas: {len(vet)}")
     for i in range(0,len(vet)):
         total += len(vet[i].split())
@@ -74,13 +83,14 @@ def tokenizacao(vetor):
     completo_txt = " ".join(vetor).lower()
     completo_txt = re.sub(r'[^\w\s]|_',' ',completo_txt)
     
-    t = re.findall(r'[a-z]{2,}', completo_txt) 
+    t = re.findall(r"[a-záàâãéêíóôõúç0-9]+", completo_txt) 
+    t = [w for w in t if len(w) > 1]
 
     return t
 def mapeamento(size):
     
-    #pad = preencher sequências | sos = start of sequence | unk = unknown, ou seja palavras raras.
-    v = {"pad":0,"<sos>":1,"<unk>":2} 
+    
+    v = {"<pad>":0,"<sos>":1,"<unk>":2} 
     v.update({
         palavra: i + 3
         for i, (palavra,_) in enumerate (size.most_common(VOCAB_SIZE - 3))})
@@ -91,19 +101,18 @@ def mapeamento(size):
 def preparacao_dados(t_id):
     e = []; s = []
     for i in range(0,len(t_id)-SEQ_LENGTH):
-        seq_in = tokens_ID[i:i+SEQ_LENGTH]
-        seq_out = tokens_ID[i+SEQ_LENGTH]
+        seq_in = t_id[i:i+SEQ_LENGTH]
+        seq_out = t_id[i+SEQ_LENGTH]
 
         e.append(seq_in);s.append(seq_out)
     return e,s
 def preparacao_dados_tamanho(e):
     #Treino(80) - Validação(10) - Teste(10)
-    # 0.8 = evitar vazamento
     tamanho_treino = int(len(e)*0.8)
     tamanho_val = int(0.1 * len(e)) + tamanho_treino
     return [tamanho_treino,tamanho_val]
 def treinar_modelo(mod,d_treino,d_val,crit,opt,n_epocas):
-    print("\nIniciando treinamento do Baseline >:D ")
+    print("\nIniciando treinamento do Baseline! ")
 
     melhor_loss_val = float("inf")
 
@@ -135,7 +144,9 @@ def treinar_modelo(mod,d_treino,d_val,crit,opt,n_epocas):
         m_loss_val = t_loss_val/len(d_val.dataset)
         print(f"Época {epocas+1}/{n_epocas} \n| Loss Treino: {m_loss_treino:.4f} \n| Loss Val: {m_loss_val:.4f}")
 
-        if m_loss_val < melhor_loss_val:
+        #usando m_loss_val = é o certo, sendo mais robosto contra o overfitting
+        #usando m_loss_treino = gera textos com melhor qualidade, mas com grande overfitting, ou seja, maior qualidade, mas menor generalizaçao.
+        if m_loss_val < melhor_loss_val: 
             melhor_loss_val = m_loss_val
             torch.save(mod.state_dict(), 'modelo_baseline_melhor.pth')
 
@@ -143,13 +154,20 @@ def treinar_modelo(mod,d_treino,d_val,crit,opt,n_epocas):
 #----------------------------------------------------------------------------------------
 #Script principal 
 
+random.seed(SEED)
+torch.manual_seed(SEED)
+
+device =  torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(SEED)
+
 corpus = []
 corpus = criagem_corpus()
 
 tokens = tokenizacao(corpus)
 total_palavras = Counter(tokens)
 
-word_to_id , id_to_word = mapeamento(total_palavras) ; # vocab = word_to_id
+word_to_id , id_to_word = mapeamento(total_palavras) ;
 tokens_ID = [word_to_id.get(token, word_to_id['<unk>']) for token in tokens]
 
 print(f"Tamanho final do vocab: {len(word_to_id)}")
@@ -160,13 +178,11 @@ entrada, prevista = preparacao_dados(tokens_ID)
 
 print(f"\nNúmero total de sequências de treinamento geradas: {len(entrada)}")
 
-#converção para tensores PyTorch
 entrada_tensor = torch.LongTensor(entrada)
 prevista_tensor = torch.LongTensor(prevista)
 
 
-tamanho = []
-tamanho = preparacao_dados_tamanho(entrada)
+tamanho = [];tamanho = preparacao_dados_tamanho(entrada)
 
 #entrada
 entrada_treino = entrada_tensor[:tamanho[0]]
@@ -188,7 +204,6 @@ dataloader_treino = DataLoader(TextoDataset(entrada_treino, prevista_treino), ba
 dataloader_val = DataLoader(TextoDataset(entrada_val, prevista_val), batch_size=BATCH_SIZE)
 dataloader_teste = DataLoader(TextoDataset(entrada_test, prevista_test), batch_size=BATCH_SIZE)
 
-device =  torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 mod_baseline = GeradorTextoLSTM(vocab_size=VOCAB_SIZE,embedding_dim=EMBEDDING_DIM,hidden_dim=HIDDEN_DIM,num_layers=NUM_LAYERS)
 mod_baseline.to(device)
