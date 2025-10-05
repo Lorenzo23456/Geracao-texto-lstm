@@ -5,6 +5,7 @@ from torch.utils.data import Dataset
 from collections import Counter
 import re
 import os 
+import random
 #----------------------------------------------------
 #Constantes 
 MODELO = 'modelo_baseline_melhor.pth'
@@ -15,6 +16,7 @@ EMBEDDING_DIM = 100
 HIDDEN_DIM = 256    
 NUM_LAYERS = 2 
 
+SEED = 42
 #----------------------------------------------------
 #Classes
 
@@ -28,17 +30,32 @@ class TextoDataset(Dataset):
         return self.entrada[idx],self.prevista[idx]
 class GeradorTextoLSTM(nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, num_layers):
-        super().__init__()
-        self.embedding = nn.Embedding(vocab_size,embedding_dim)
-        self.lstm = nn.LSTM(input_size=embedding_dim,hidden_size=hidden_dim,num_layers=num_layers,batch_first=True,dropout=0.5 if num_layers > 1 else 0 )
-        self.linear = nn.Linear(hidden_dim, vocab_size)
+        super(GeradorTextoLSTM, self).__init__()
+        self.num_directions = 2
+        self.embedding = nn.Embedding(vocab_size, embedding_dim)
+
+        self.lstm = nn.LSTM(
+            input_size=embedding_dim,
+            hidden_size=hidden_dim,
+            num_layers=num_layers,
+            batch_first=True, 
+            dropout=0.5 if num_layers > 1 else 0,
+            bidirectional=True 
+        )
+        self.linear = nn.Linear(hidden_dim * self.num_directions, vocab_size)
+
+
     def forward (self, x, hidden=None):
         embedded = self.embedding(x)
-        lstm_out, hidden = self.lstm(embedded, hidden)
-        ultima_saida = lstm_out[:, -1, :] 
-        output = self.linear(ultima_saida)
-        return output, hidden
+        lstm_out, (h_n, c_n) = self.lstm(embedded, hidden)
 
+        h_fwd = h_n[-2,:,:]
+        h_bwd = h_n[-1,:,:]
+
+        ultima_saida = torch.cat([h_fwd, h_bwd], dim=1) 
+        output = self.linear(ultima_saida)
+        
+        return output, (h_n,c_n)
 #----------------------------------------------------
 #Funções
 def criagem_corpus ():
@@ -53,7 +70,8 @@ def tokenizacao(vetor):
     completo_txt = " ".join(vetor).lower()
     completo_txt = re.sub(r'[^\w\s]|_',' ',completo_txt)
     
-    t = re.findall(r'[a-z]{2,}', completo_txt) 
+    t = re.findall(r"[a-záàâãéêíóôõúç0-9]+", completo_txt) 
+    t = [w for w in t if len(w) > 1]
 
     return t
 def mapeamento(size):
@@ -80,7 +98,7 @@ def gerar_texto(m,start_txt,num_word_gen,temp,wti,itw,seq_length):
     hidden = None
     with torch.no_grad():
         for _ in range(num_word_gen):
-            output, hidden = m(input_tensor,hidden)
+            output, _ = m(input_tensor)
 
             output_dist = output.squeeze().div(temp).exp()
             next_word_id = torch.multinomial(output_dist,1).item()
@@ -96,7 +114,13 @@ def gerar_texto(m,start_txt,num_word_gen,temp,wti,itw,seq_length):
 #----------------------------------------------------
 #Script principal 
 
+random.seed(SEED)
+torch.manual_seed(SEED)
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(SEED)
+
 print(f"Dispositivo: {device}")
 
 if not os.path.exists(MODELO):
@@ -110,19 +134,18 @@ else:
     mod = GeradorTextoLSTM(vocab_size= VOCAB_SIZE,embedding_dim= EMBEDDING_DIM,hidden_dim= HIDDEN_DIM,num_layers= NUM_LAYERS)
     mod.to(device)
     mod.load_state_dict(torch.load(MODELO, map_location=device))
-    print(f"Modelo treinado '{MODELO}' carregado com sucesso.")
 
-    start_seed = "quando a noite cai e a lua"
+    start_seed = input()
     num_to_gerador = 80
-    print("\n--- INICIANDO GERAÇÃO (Avaliação Qualitativa) ---")
+    print("\n=== INICIANDO GERAÇÃO (Avaliação Qualitativa) ===")
 
 
 
     temp_7 = gerar_texto(mod, start_seed, num_to_gerador, 0.7, word_to_id, id_to_word, SEQ_LENGTH)
-    print(f"\n[T=0.7] (Foco em Coerência):\n{temp_7}")
+    print(f"\n[T=0.7] (Coerência):\n{temp_7}")
 
     temp_10 = gerar_texto(mod, start_seed, num_to_gerador, 1.0, word_to_id, id_to_word, SEQ_LENGTH)
     print(f"\n[T=1.0] (Padrão):\n{temp_10}")
 
     temp_13 = gerar_texto(mod, start_seed, num_to_gerador, 1.3, word_to_id, id_to_word, SEQ_LENGTH)
-    print(f"\n[T=1.3] (Foco em Criatividade):\n{temp_13}")
+    print(f"\n[T=1.3] (Criatividade):\n{temp_13}")
