@@ -1,12 +1,12 @@
 # Geração de Textos com Redes Neurais Recorrentes: Relatório de Implementação e Avaliação de Modelo LSTM
 
-Autores e Afiliação
+### Autores e Afiliação
 
     Autores: Arthur Lima de Menezes, João Pedro Huppes Arenales, Lorenzo de Castro, Pâmela da Silva Paes 
 
-Afiliação: Faculdade de Computação - Universidade Federal de Mato Grosso do Sul (UFMS)
+### Afiliação: Faculdade de Computação - Universidade Federal de Mato Grosso do Sul (UFMS)
 
-Resumo do Projeto
+ ### Resumo do Projeto
 
 Este projeto detalhou a implementação e avaliação de um modelo de linguagem LSTM (Long Short-Term Memory) para a tarefa de geração de texto em português. O objetivo foi desenvolver o processo completo, desde a construção do corpus até a análise crítica do modelo.
 
@@ -52,7 +52,7 @@ Otimizador: Adam, com taxa de aprendizado inicial de 0.0005.
 
 Função de Perda: Cross-Entropy Loss, métrica padrão para classificação multiclasse (previsão da próxima palavra).
 
-Resultado e Discussão
+### Resultado e Discussão
 
 Performance Quantitativa: Perplexidade (PPL)
 
@@ -117,7 +117,7 @@ Viés Temático: O modelo demonstrou forte viés temático, refletindo o conteú
 
 Vocabulário Fixo: Mapear termos fora do conjunto das 5.000 palavras mais frequentes para o token <unk> limitou a capacidade da rede de gerar um vocabulário mais rico.
 
-Conclusão
+### Conclusão
 
 O estudo demonstrou que o modelo LSTM treinado do zero conseguiu capturar o estilo e vocabulário temático do corpus de Zeca Pagodinho. Contudo, a alta perplexidade (654.4384) e a baixa qualidade dos textos gerados confirmaram o overfitting, que é uma consequência direta do tamanho pequeno do corpus de treinamento.
 
