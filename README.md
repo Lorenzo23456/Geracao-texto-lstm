@@ -1,4 +1,3 @@
-Claro! Aqui está uma versão mais bonita e organizada do seu relatório em Markdown, com melhor estrutura visual, uso de emojis para destacar seções e tabelas para facilitar a leitura:
 
 ---
 
