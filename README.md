@@ -98,4 +98,4 @@ O modelo LSTM conseguiu capturar o estilo e vocabulário temático de Zeca Pagod
 
 ---
 
-Se quiser, posso transformar esse conteúdo em uma apresentação ou pôster acadêmico também!
+
