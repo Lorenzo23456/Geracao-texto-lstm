@@ -1,124 +1,102 @@
-# Geração de Textos com Redes Neurais Recorrentes: Relatório de Implementação e Avaliação de Modelo LSTM
+Claro! Aqui está uma versão mais bonita e organizada do seu relatório em Markdown, com melhor estrutura visual, uso de emojis para destacar seções e tabelas para facilitar a leitura:
 
-### Autores e Afiliação
+---
 
-    Autores: Arthur Lima de Menezes, João Pedro Huppes Arenales, Lorenzo de Castro, Pâmela da Silva Paes 
+# 🧠 Geração de Textos com Redes Neurais Recorrentes  
+## Relatório de Implementação e Avaliação de Modelo LSTM
 
-### Afiliação: Faculdade de Computação - Universidade Federal de Mato Grosso do Sul (UFMS)
+### 👥 Autores e Afiliação
 
- ### Resumo do Projeto
+- **Autores**: Arthur Lima de Menezes, João Pedro Huppes Arenales, Lorenzo de Castro, Pâmela da Silva Paes  
+- **Afiliação**: Faculdade de Computação — Universidade Federal de Mato Grosso do Sul (UFMS)
 
-Este projeto detalhou a implementação e avaliação de um modelo de linguagem LSTM (Long Short-Term Memory) para a tarefa de geração de texto em português. O objetivo foi desenvolver o processo completo, desde a construção do corpus até a análise crítica do modelo.
+---
 
-O modelo foi treinado com um corpus customizado de 441 letras de música de Zeca Pagodinho, utilizando embeddings aprendidas do zero. A escolha do artista se deu pela riqueza de seu vocabulário e estilo cultural marcante.
+### 📌 Resumo do Projeto
 
-Resultados Principais:
+Este projeto abordou a implementação e avaliação de um modelo de linguagem baseado em LSTM (Long Short-Term Memory) para geração de texto em português. O processo envolveu desde a construção do corpus até a análise crítica dos resultados.
 
-    Alta Perplexidade: O modelo obteve uma perplexidade (PPL) de aproximadamente 654.4384 no conjunto de teste.
+- **Corpus**: 441 letras de Zeca Pagodinho  
+- **Embeddings**: Aprendidos do zero  
+- **Motivação**: Vocabulário rico e estilo cultural marcante do artista
 
-Overfitting: A análise das curvas de perda e a alta perplexidade indicaram forte overfitting. A perda no treino diminuiu, enquanto a perda na validação aumentou após as primeiras épocas.
+---
 
-Qualidade do Texto: Os textos gerados apresentaram baixa coerência e alta repetição.
+### 📊 Resultados Principais
 
-Materiais e Métodos
+- **🔺 Alta Perplexidade**: PPL ≈ 654.4384 no conjunto de teste  
+- **⚠️ Overfitting**: Perda no treino caiu, enquanto a de validação aumentou  
+- **📝 Qualidade dos Textos**: Baixa coerência e alta repetição
 
-Corpus: Letras de Zeca Pagodinho
+---
 
-    Coleta: Foram extraídas 441 letras de música via web scraping usando a biblioteca BeautifulSoup.
+### 🧪 Materiais e Métodos
 
-Conteúdo: Após limpeza e normalização, o corpus foi consolidado em um arquivo de texto e totalizou 81.348 palavras.
+#### 🎼 Corpus: Letras de Zeca Pagodinho
 
-Pré-processamento e Tokenização
+- **Coleta**: Web scraping com BeautifulSoup  
+- **Total**: 441 músicas → 81.348 palavras após limpeza
 
-    O texto foi dividido em tokens (palavras).
+#### 🔧 Pré-processamento
 
-Foi criado um vocabulário de 5.000 palavras mais frequentes; as demais foram mapeadas para o token de desconhecido (<unk>).
+- Tokenização por palavras  
+- Vocabulário limitado às 5.000 palavras mais frequentes  
+- Palavras raras mapeadas para `<unk>`
 
-Arquitetura do Modelo Base LSTM
+#### 🏗️ Arquitetura do Modelo LSTM
 
-O modelo implementado é uma rede neural LSTM, projetada para prever a próxima palavra da sequência. A arquitetura consistiu em:
+| Componente         | Descrição                                                                 |
+|--------------------|---------------------------------------------------------------------------|
+| Embedding          | Vetores densos de 100 dimensões, aprendidos do zero                       |
+| LSTM               | 2 camadas com 256 unidades ocultas cada                                   |
+| Camada Linear      | Mapeia saída da LSTM para distribuição de probabilidade do vocabulário    |
 
-    Camada de Embedding: Transforma índices numéricos em vetores densos de 100 dimensões. Os pesos foram aprendidos do zero durante o treinamento.
+#### ⚙️ Treinamento
 
-Camada LSTM: O núcleo do modelo, com duas camadas de células LSTM, cada uma com 256 unidades ocultas.
+- **Épocas**: 15  
+- **Otimizador**: Adam (lr = 0.0005)  
+- **Função de Perda**: Cross-Entropy Loss
 
-Camada Linear: Mapeia a saída da LSTM para o tamanho do vocabulário, gerando a distribuição de probabilidade da próxima palavra.
+---
 
-Treinamento
+### 📈 Resultados e Discussão
 
-    Épocas: O modelo foi treinado por 15 épocas.
+#### 🔢 Performance Quantitativa
 
-Otimizador: Adam, com taxa de aprendizado inicial de 0.0005.
+- **Perplexidade (PPL)**: 654.4384  
+- **Interpretação**: Valor alto → dificuldade em prever sequências não vistas → overfitting
 
-Função de Perda: Cross-Entropy Loss, métrica padrão para classificação multiclasse (previsão da próxima palavra).
+#### 🧾 Performance Qualitativa: Geração de Texto
 
-### Resultado e Discussão
+| Temperatura | Característica Principal                          | Coerência                      | Repetição                          |
+|-------------|----------------------------------------------------|--------------------------------|------------------------------------|
+| 0.7         | Prioriza palavras mais prováveis                   | Baixa (coerência de longo prazo) | Alta ("eu não vou não vou...")     |
+| 1.0         | Equilíbrio entre coerência e criatividade          | Fraca (transições abruptas)     | Média                              |
+| 1.5         | Mais aleatoriedade, suaviza probabilidades         | Muito baixa (saltos temáticos)  | Baixa (alta variedade de palavras) |
 
-Performance Quantitativa: Perplexidade (PPL)
+- Vocabulário temático do samba foi mantido
 
-    PPL Obtida: 654.4384.
+---
 
-Interpretação: Este valor é considerado alto, indicando que o modelo tem dificuldade em prever sequências de palavras que não viu no treino. A principal causa é o overfitting, que é comum ao treinar um modelo do zero em um corpus relativamente pequeno (441 músicas).
+### 🚧 Limitações do Modelo
 
-Performance Qualitativa: Geração de Amostras
+- **Corpus Pequeno**: 441 músicas não foram suficientes para generalização  
+- **Repetição e Incoerência**: Erros predominantes  
+- **Viés Temático**: Palavras como "samba", "amor", "cerveja" dominam  
+- **Vocabulário Fixo**: Uso de `<unk>` limitou riqueza lexical
 
-A geração de textos com diferentes temperaturas revelou:
-Temperatura	Característica Principal	Coerência	Repetição
-0.7	
+---
 
-Prioriza palavras mais prováveis.
+### ✅ Conclusão
 
-	
+O modelo LSTM conseguiu capturar o estilo e vocabulário temático de Zeca Pagodinho, mas apresentou:
 
-Baixa (Coerência de Longo Prazo).
-	
+- **Alta perplexidade**
+- **Baixa qualidade textual**
+- **Overfitting severo**
 
-		
+🔍 A principal lição é que **modelos de linguagem treinados do zero exigem grandes volumes de dados** para alcançar boa generalização.
 
-Alta ("eu não vou não vou não vou...").
+---
 
-1.0	
-
-Equilíbrio entre coerência e criatividade.
-	
-
-	
-
-Fraca (Transições abruptas entre conjuntos temáticos).
-	
-
-		
-
-Média (Menos repetitivo que 0.7).
-
-1.5	
-
-Suaviza probabilidades, aumentando a aleatoriedade.
-	
-
-		
-
-Mais Baixa (Priorização da aleatoriedade leva a saltos temáticos).
-	
-
-	
-
-Baixa (Alta variedade de palavras).
-
-O modelo foi capaz de manter o vocabulário temático do samba.
-
-Limitações do Modelo Base
-
-    Tamanho do Corpus: As 441 músicas foram insuficientes para que o modelo aprendesse as complexas regras gramaticais e semânticas da língua portuguesa, resultando no overfitting.
-
-Repetição e Incoerência: O principal erro foi a repetição de palavras e estruturas frasais, além da incoerência semântica predominante.
-
-Viés Temático: O modelo demonstrou forte viés temático, refletindo o conteúdo das letras de Zeca Pagodinho (palavras como "samba", "amor", "cerveja", "deixa" e "vida" apareceram com altíssima frequência).
-
-Vocabulário Fixo: Mapear termos fora do conjunto das 5.000 palavras mais frequentes para o token <unk> limitou a capacidade da rede de gerar um vocabulário mais rico.
-
-### Conclusão
-
-O estudo demonstrou que o modelo LSTM treinado do zero conseguiu capturar o estilo e vocabulário temático do corpus de Zeca Pagodinho. Contudo, a alta perplexidade (654.4384) e a baixa qualidade dos textos gerados confirmaram o overfitting, que é uma consequência direta do tamanho pequeno do corpus de treinamento.
-
-A principal conclusão é que treinar um modelo de linguagem a partir do zero em um corpus de nicho e pequena escala é uma tarefa difícil, sublinhando a importância da quantidade massiva de dados para a generalização eficaz.
+Se quiser, posso transformar esse conteúdo em uma apresentação ou pôster acadêmico também!
